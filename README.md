@@ -16,7 +16,7 @@ Todo lo que está aquí fue **probado en el servidor real**. Los comandos funcio
 - **Saber comandos básicos** de Linux (`cd`, `ls`, `git`, editar un archivo).
 - **Tu app vive FUERA de `public_html`.** Regla de oro: `public_html` es para archivos públicos estáticos. Tu app Node va en tu HOME, por ejemplo `~/miapp`. Apache va a reenviar el tráfico a tu app; nadie navega los archivos directamente.
 
-> Node solo corre como un proceso tuyo que escucha en un puerto local (`127.0.0.1:PUERTO`). Apache se encarga de que `tudominio.com` llegue a ese puerto. Nunca expongas la carpeta de tu código en la web.
+> Node corre como un proceso tuyo que escucha en un **socket** (un archivo dentro de tu carpeta, **sin abrir ningún puerto**). Apache reenvía `tudominio.com` a ese socket. Nunca expongas la carpeta de tu código en la web. *(Cómo hacerlo lo ves más abajo, en "El cambio CLAVE".)*
 
 ---
 
@@ -352,7 +352,8 @@ Falta lo último: que cuando alguien entre a `app.tudominio.com`, el servidor re
 
 1. Crea tu **dominio o subdominio** en DirectAdmin (**Account Manager → Domain Setup**), si aún no existe.
 2. Asegúrate de que tu app **escuche en el socket** (ver la sección *"El cambio CLAVE: escuchar en un SOCKET"*), no en un puerto.
-3. En tu **panel de MBHostCloud**, abre la sección **"Node App"** y elige: tu **dominio/subdominio**, la **carpeta de tu app** y el **archivo de arranque** → botón **Enlazar**.
+3. Arranca tu app en pm2 (Paso 3) **escuchando en el socket**. Luego, en tu **panel de MBHostCloud**, abre la sección **"Node App"**, elige tu **app** (de las que tengas corriendo en pm2) y tu **dominio/subdominio** → botón **Enlazar**.
+   > *La **carpeta** y el **archivo de arranque** se detectan solos de tu pm2 — no los escribes.* El enlace es **casi instantáneo**.
    > *(Mientras habilitamos esa sección en tu panel, escríbenos tu dominio + carpeta de la app a **support@mbhostcloud.com** y lo activamos en el momento.)*
 
 En segundos tu dominio queda sirviendo tu app **por socket** (sin puerto abierto), con **SSL**. Nosotros configuramos el reverse-proxy y tu `APP_SOCKET`; **tú solo mantienes tu app viva con pm2 y ves tus logs.** 🎉
