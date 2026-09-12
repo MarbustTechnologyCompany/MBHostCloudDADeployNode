@@ -175,6 +175,61 @@ if (socket) {
 }
 ```
 
+**Next.js — ⚠️ necesita un `server.js` propio (no sirve `next start`):**
+
+`next start` **solo sabe abrir un puerto TCP**: no acepta una ruta de socket. Por eso una app Next **no arranca con `npm start`** en MBHostCloud. La solución es un archivo `server.js` en la raíz de tu proyecto, que envuelve el mismo manejador de Next sobre el socket:
+
+```js
+// server.js — en la raíz del proyecto, junto a package.json
+const { createServer } = require('http');
+const { existsSync, unlinkSync, chmodSync } = require('fs');
+const next = require('next');
+
+const socket = process.env.APP_SOCKET;
+const app = next({ dev: false, dir: __dirname });
+const handle = app.getRequestHandler();
+
+app.prepare().then(() => {
+  const server = createServer((req, res) => handle(req, res));
+
+  if (socket) {
+    if (existsSync(socket)) { try { unlinkSync(socket); } catch {} }
+    server.listen(socket, () => {
+      chmodSync(socket, 0o660);
+
+      process.umask(0o022);   // 👈 IMPRESCINDIBLE EN NEXT — ver la nota de abajo
+
+      console.log('escuchando en socket ' + socket);
+    });
+  } else {
+    server.listen(process.env.PORT || 3000);   // fallback para tu PC de desarrollo
+  }
+});
+```
+
+Y lo arrancas así (**no** con `npm start`):
+
+```bash
+npm run build
+pm2 start server.js --name miapp
+pm2 save
+```
+
+> **La línea `process.umask(0o022)` no es opcional.**
+>
+> Al arrancar tu app le ponemos `umask 0117`, para que el socket nazca en `0660`: el servidor web lo alcanza y nadie más. Pero ese mismo umask le quita el permiso de **ejecución** a *todo directorio* que Next crea mientras corre — y sin ese bit, Next no puede escribir dentro de las carpetas que él mismo acaba de crear.
+>
+> El síntoma clásico aparece en el optimizador de imágenes:
+>
+> ```
+> ⨯ Failed to write image to cache ...
+> Error: EACCES: permission denied, mkdir '.next/cache/images/...'
+> ```
+>
+> Tus imágenes **se siguen viendo**, así que es fácil no darse cuenta. Lo que pasa por detrás es que se **re-optimizan en cada visita**: CPU alto, páginas más lentas y el log llenándose de errores.
+>
+> Poner el umask en `0022` **después** de crear el socket lo resuelve, y el socket conserva su `0660` porque ya se le hizo `chmod` explícito. Ponerlo *antes* del `listen()` dejaría el socket abierto de más por un instante — por eso va exactamente en ese orden.
+
 > Con `APP_SOCKET` puesto, tu app corre en el **socket** (en el servidor); sin él, en el **puerto** de siempre (en tu PC de desarrollo). **El mismo código sirve para los dos.**
 
 ### ¿Tú generas el socket, o el servidor? (la duda más común)
@@ -227,7 +282,7 @@ npm run build       # imprescindible en NestJS (recompila dist/)
 pm2 restart miapp
 ```
 
-> **Regla simple:** Express arranca tu **fuente** (`app.js`); NestJS (y todo TypeScript compilado) arranca lo de **`dist/`** (`dist/main.js`) y necesita `npm run build` en cada cambio. Otros: **Next.js** → `pm2 start npm --name miapp -- start` (tras `npm run build`). **Frontend estático** (Vite/React puro) NO va con PM2 — eso va en `public_html`.
+> **Regla simple:** Express arranca tu **fuente** (`app.js`); NestJS (y todo TypeScript compilado) arranca lo de **`dist/`** (`dist/main.js`) y necesita `npm run build` en cada cambio. **Next.js** arranca un `server.js` propio (`npm run build && pm2 start server.js`) — `next start` **no funciona aquí**, ver la sección del socket. **Frontend estático** (Vite/React puro) NO va con PM2 — eso va en `public_html`.
 
 ### Arranca tu app y mírala corriendo
 
@@ -457,6 +512,14 @@ O elige otro puerto en tu app **y** actualiza el puerto en el bloque del proxy.
 **Error 500 / la página no carga bien:** el problema está dentro de tu app, no en el proxy. Míralo en vivo:
 ```bash
 pm2 logs miapp --err
+```
+
+**Next.js: `npm start` no arranca la app.** Es lo esperado: `next start` solo abre puertos TCP y aquí se escucha en un socket. Necesitas el `server.js` propio — ver la sección de Next.js más arriba.
+
+**Next.js: `EACCES ... mkdir '.next/cache/images/...'` (imágenes lentas, log lleno de errores).** Te falta `process.umask(0o022)` en tu `server.js`, justo después de crear el socket. Tras agregarlo, borra la carpeta dañada y reinicia:
+```bash
+rm -rf .next/cache/images
+pm2 restart miapp
 ```
 
 **El SSL no renueva:** verifica que dejaste la línea `RewriteCond %{REQUEST_URI} !^/\.well-known/` en tu bloque de proxy — sin ella, Let's Encrypt no puede validar el dominio.
