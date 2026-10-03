@@ -49,7 +49,7 @@ Tu estructura debe verse así:
 
 ## Paso 2 — Node + instalar dependencias
 
-**En MBHostCloud ya tienes Node 20 (LTS) y PM2 listos por defecto — no instalas nada.** Al abrir el Terminal ya están en tu PATH:
+**En MBHostCloud ya tienes Node 20 (LTS), PM2 y nvm listos por defecto — no instalas nada.** Al abrir el Terminal ya están en tu PATH (nvm queda disponible para instalar otras versiones de Node si tu app las pide):
 
 ```bash
 node -v      # v20.18.1   (ya disponible, sin instalar)
@@ -66,34 +66,29 @@ npm install          # instala según package.json
 npm ci
 ```
 
-> Solo si tu app pide una versión **distinta** de Node (la última, o una vieja como 18/16) la instalas en tu propio HOME sin root, con la sección de abajo. Para la mayoría, **node 20 ya está y no tocas nada.**
+> Solo si tu app pide una versión **distinta** de Node (la última, o una vieja como 18/16) la usas con **nvm**, que **ya viene instalado** en tu cuenta (sección de abajo). Para la mayoría, **node 20 ya está y no tocas nada.**
 
-### Instalar OTRA versión de Node (opcional): nvm
+### Usar OTRA versión de Node: nvm (ya viene instalado)
+
+**No instalas nvm: ya viene activo por defecto en tu cuenta de MBHostCloud.** Solo lo usas para instalar o cambiar a otra versión de Node. (Node 20 sigue siendo tu default; nvm lo reconoce como `system`.)
 
 ```bash
-# 1) Instalar nvm (se instala en ~/.nvm, todo dentro de tu HOME)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+# Ver versiones — al inicio solo verás 'system' (= el Node 20 por defecto)
+nvm list
 
-# 2) Cargar nvm en la sesión actual (el instalador ya agregó el bloque a ~/.bashrc)
-source ~/.bashrc          # o cierra y vuelve a abrir el Terminal
+# Instalar y usar OTRA versión (ejemplo: 18)
+nvm install 18
+nvm use 18
+nvm alias default 18      # opcional: que 18 (en vez de 20) sea tu default en cada nuevo login
 
-# 3) Instalar y fijar Node 20
-nvm install 20
-nvm use 20
-nvm alias default 20      # que 20 sea el default en cada nuevo login
-
-# 4) Comprobar
-node -v                   # v20.x
+# Comprobar
+node -v
 npm -v
 ```
 
-El instalador deja este bloque al final de tu `~/.bashrc`, y con eso Node 20 queda cargado **automáticamente** cada vez que entres al Terminal (no tienes que repetir nada):
+> Si abriste el Terminal **antes** de que tu cuenta tuviera nvm, cierra y vuelve a entrar una vez (o `source ~/.bashrc`) y ya lo tendrás. nvm se carga solo en cada login nuevo — no tienes que repetir nada.
 
-```bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-```
+> **¿Tu app corre bajo PM2 con otra versión de Node?** PM2 **no** corre tu app en "cualquier" versión: cada app corre en **la versión que le fijes**. Si instalaste otra con nvm, arráncala apuntando a ese Node — `pm2 start dist/main.js --interpreter="$(which node)"` (o el campo `interpreter` en tu `ecosystem.config.js`). Si el daemon de PM2 ya estaba corriendo con otra versión de Node, corre `pm2 update` para que tome la nueva.
 
 ### Alternativa: descargar el tarball oficial (si no quieres nvm o GitHub está bloqueado)
 
@@ -111,14 +106,16 @@ node -v      # v20.18.1
 npm -v       # 10.8.2
 ```
 
-### ¿Y si a tu app le basta con Node 16?
+### ¿Y si a tu app le basta con el Node del sistema?
 
-Entonces no instalas nada: el Node del sistema ya está en el PATH.
+Entonces no instalas nada: **Node 20 ya está en el PATH** por defecto.
 
 ```bash
-node -v      # v16.20.2 (ya disponible)
-npm -v       # 8.19.4
+node -v      # v20.18.1 (ya disponible)
+npm -v       # 10.8.2
 ```
+
+Si tu app necesita una versión **más vieja** (16/18) o **más nueva**, instálala con **nvm** (sección de arriba) — ya viene listo.
 
 ### Instalar las dependencias del proyecto
 
@@ -524,7 +521,7 @@ pm2 restart miapp
 
 **El SSL no renueva:** verifica que dejaste la línea `RewriteCond %{REQUEST_URI} !^/\.well-known/` en tu bloque de proxy — sin ella, Let's Encrypt no puede validar el dominio.
 
-**`node -v` sigue mostrando v16 tras instalar Node 20:** no se cargó tu `~/.bashrc`. Corre `source ~/.bashrc` o cierra y reabre el Terminal. Con nvm, asegúrate de haber hecho `nvm alias default 20`.
+**`node -v` muestra una versión que no esperabas:** no se cargó tu `~/.bashrc`. Corre `source ~/.bashrc` o cierra y reabre el Terminal. Si usaste nvm, revisa cuál quedó por defecto con `nvm list` y, si hace falta, `nvm alias default <versión>`.
 
 ---
 
