@@ -79,7 +79,7 @@ nvm list
 # Instalar y usar OTRA versión (ejemplo: 18)
 nvm install 18
 nvm use 18
-nvm alias default 18      # opcional: que 18 sea tu default en cada nuevo login
+nvm alias default 18      # opcional: que 18 (en vez de 20) sea tu default en cada nuevo login
 
 # Comprobar
 node -v
@@ -88,7 +88,7 @@ npm -v
 
 > Si abriste el Terminal **antes** de que tu cuenta tuviera nvm, cierra y vuelve a entrar una vez (o `source ~/.bashrc`) y ya lo tendrás. nvm se carga solo en cada login nuevo — no tienes que repetir nada.
 
-> **¿Tu app corre bajo PM2 con otra versión de Node?** PM2 **no** corre tu app en "cualquier" versión: cada app corre en **la versión que le fijes**. Si instalaste otra con nvm, arráncala apuntando a ese Node — `pm2 start dist/main.js --interpreter="$(which node)"` (o el campo `interpreter` en tu `ecosystem.config.js`). Tras cambiar de versión con `nvm use`, corre `pm2 update` para que el daemon de PM2 tome el Node nuevo.
+> **¿Tu app corre bajo PM2 con otra versión de Node?** PM2 **no** corre tu app en "cualquier" versión: cada app corre en **la versión que le fijes**. Si instalaste otra con nvm, arráncala apuntando a ese Node — `pm2 start dist/main.js --interpreter="$(which node)"` (o el campo `interpreter` en tu `ecosystem.config.js`). Si el daemon de PM2 ya estaba corriendo con otra versión de Node, corre `pm2 update` para que tome la nueva.
 
 ### Alternativa: descargar el tarball oficial (si no quieres nvm o GitHub está bloqueado)
 
@@ -106,14 +106,16 @@ node -v      # v20.18.1
 npm -v       # 10.8.2
 ```
 
-### ¿Y si a tu app le basta con Node 16?
+### ¿Y si a tu app le basta con el Node del sistema?
 
-Entonces no instalas nada: el Node del sistema ya está en el PATH.
+Entonces no instalas nada: **Node 20 ya está en el PATH** por defecto.
 
 ```bash
-node -v      # v16.20.2 (ya disponible)
-npm -v       # 8.19.4
+node -v      # v20.18.1 (ya disponible)
+npm -v       # 10.8.2
 ```
+
+Si tu app necesita una versión **más vieja** (16/18) o **más nueva**, instálala con **nvm** (sección de arriba) — ya viene listo.
 
 ### Instalar las dependencias del proyecto
 
@@ -519,7 +521,7 @@ pm2 restart miapp
 
 **El SSL no renueva:** verifica que dejaste la línea `RewriteCond %{REQUEST_URI} !^/\.well-known/` en tu bloque de proxy — sin ella, Let's Encrypt no puede validar el dominio.
 
-**`node -v` sigue mostrando v16 tras instalar Node 20:** no se cargó tu `~/.bashrc`. Corre `source ~/.bashrc` o cierra y reabre el Terminal. Con nvm, asegúrate de haber hecho `nvm alias default 20`.
+**`node -v` muestra una versión que no esperabas:** no se cargó tu `~/.bashrc`. Corre `source ~/.bashrc` o cierra y reabre el Terminal. Si usaste nvm, revisa cuál quedó por defecto con `nvm list` y, si hace falta, `nvm alias default <versión>`.
 
 ---
 
