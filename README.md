@@ -2,6 +2,8 @@
 
 **Despliega tu propia app Node.js en tu hosting de MBHostCloud — con control total y logs en vivo.**
 
+> Repo **interno** (guía). Para colaborar: [`CONTRIBUTING.md`](CONTRIBUTING.md) · reglas de la guía: [`AGENTS.md`](AGENTS.md) · primer día: [`docs/ONBOARDING.md`](docs/ONBOARDING.md) · versión condensada para agentes: [`docs/DESPLIEGUE-AGENTES.md`](docs/DESPLIEGUE-AGENTES.md) · seguridad: [`SECURITY.md`](SECURITY.md).
+
 > ⚠️ **Guía exclusiva para hostings de MBHostCloud®.** Todos los comandos, rutas, versiones y configuraciones de esta guía fueron **verificados sobre la infraestructura de MBHostCloud** (DirectAdmin + Apache). Están pensados **únicamente** para cuentas de hosting de MBHostCloud®; en otros proveedores es muy probable que no apliquen o se comporten distinto. Si tienes tu hosting con nosotros, funcionan tal cual. 💙
 
 Esta guía es para clientes de MBHostCloud (hosting **DirectAdmin + Apache**) que quieren correr su propia aplicación de Node.js (una API con Express/NestJS, un backend, un bot, lo que sea) directamente en su cuenta, sin depender de nadie. Vas a poder subir tu código, elegir la versión de Node que necesites, mantener el proceso vivo aunque el servidor se reinicie, ver los logs en tiempo real, y enlazar tu dominio a la app.

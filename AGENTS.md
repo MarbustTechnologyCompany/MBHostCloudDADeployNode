@@ -1,99 +1,52 @@
-# AGENTS.md — Desplegar una app Node/Next.js en MBHostCloud (guía para agentes de IA)
+# Reglas del repositorio — MBHostCloud: Desplegar Node.js (guía)
 
-Esta es la versión **condensada y accionable** para un **agente de IA** que ayuda a un cliente de MBHostCloud a desplegar su app Node.js / Next.js en su hosting (DirectAdmin + Apache), **como el usuario cliente, sin root**. Para el detalle y las explicaciones completas, lee el [`README.md`](./README.md).
+Este archivo es para **todas las personas y agentes de IA** que trabajan en esta guía (Claude Code, Codex, Cursor, Copilot u otros). Si usas Claude Code, se carga solo a través de `CLAUDE.md`.
 
-> Entorno: hosting compartido DirectAdmin + Apache, acceso por el **Terminal del panel** (sin root). La app corre bajo **pm2** y escucha en un **socket Unix** (no en un puerto). Apache hace reverse-proxy del dominio al socket. El cliente **no** edita configs de Apache; el enlace dominio→socket lo hace **el panel** (sección *Node App*) o el CLI `mbnode-deploy`.
+- Si es tu primer día: [`docs/ONBOARDING.md`](docs/ONBOARDING.md).
+- Cómo colaborar paso a paso: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- **La guía completa** (para el cliente): [`README.md`](README.md). **Versión condensada para agentes de IA:** [`docs/DESPLIEGUE-AGENTES.md`](docs/DESPLIEGUE-AGENTES.md).
+- El estándar común de todos los repos de Marbust: `MarbustTechnologyCompany/.github` → `ESTANDAR-REPOSITORIOS.md`.
 
----
+**Clase del repo: interno** (`.github/marbust.json`). **No publica novedades** al exterior; en los PRs solo va la línea *interna* de Novedad.
 
-## Flujo correcto (en orden)
+**Qué es:** una **guía** para clientes de MBHostCloud (hosting DirectAdmin + Apache) que quieren desplegar su propia app **Node.js / Next.js** en su cuenta, **como el usuario cliente, sin root**. La app corre bajo **pm2** en un **socket Unix** (sin puertos); Apache hace reverse-proxy del dominio al socket, enlazado por el panel (*Node App*) o el CLI `mbnode-deploy`. Es **contenido/documentación**, no código ejecutable.
 
-1. **Subir el código FUERA de `public_html`.** La app va en el HOME, p. ej. `~/miapp`. `public_html` es solo para estáticos públicos. Usar `git clone` o el File Manager.
-2. **Elegir la versión de Node según `engines`.** Node 20 LTS, pm2 y nvm ya vienen listos. **Antes de instalar deps**, revisar `engines` en `package.json`. Si pide otra versión (p. ej. `>=22`), instalarla con nvm:
-   ```bash
-   nvm install 22 && nvm use 22 && nvm alias default 22
-   ```
-3. **Instalar dependencias** con la versión correcta ya activa:
-   ```bash
-   cd ~/miapp
-   npm ci            # instalación exacta desde el lock (o npm install)
-   ```
-4. **Adaptar el código para escuchar en el socket** (`process.env.APP_SOCKET`), con fallback a puerto solo para desarrollo local. Para **Next.js SSR** hace falta un `server.js` propio (`next start` NO sirve: solo abre puertos TCP). El `server.js` debe:
-   - escuchar en `process.env.APP_SOCKET`,
-   - hacer `chmodSync(socket, 0o660)` tras el listen,
-   - ejecutar **`process.umask(0o022)` justo DESPUÉS del listen** (imprescindible en Next: sin eso, Next no puede escribir en los directorios que crea — error `EACCES mkdir '.next/cache/images/...'`, imágenes re-optimizadas en cada visita).
+> 🔴 **Todo lo que afirma la guía debe ser cierto en el servidor real.** El README lo dice: "Todo fue probado en el servidor real; los comandos funcionan tal cual". Un paso que no se verificó en el hosting de MBHostCloud **no entra**. Una guía que miente cuesta horas al cliente.
 
-   Esqueleto de `server.js` para Next.js:
-   ```js
-   // server.js — raíz del proyecto, junto a package.json
-   const { createServer } = require('http');
-   const { existsSync, unlinkSync, chmodSync } = require('fs');
-   const next = require('next');
+## Idiomas
 
-   const socket = process.env.APP_SOCKET;
-   const app = next({ dev: false, dir: __dirname });
-   const handle = app.getRequestHandler();
+- La guía está en **español** (Ecuador), con **tuteo**.
+- Comandos y nombres técnicos en inglés donde corresponda.
+- Issues, PRs y commits en español.
 
-   app.prepare().then(() => {
-     const server = createServer((req, res) => handle(req, res));
-     if (socket) {
-       if (existsSync(socket)) { try { unlinkSync(socket); } catch {} }
-       server.listen(socket, () => {
-         chmodSync(socket, 0o660);
-         process.umask(0o022);   // IMPRESCINDIBLE en Next, DESPUÉS del listen
-         console.log('escuchando en socket ' + socket);
-       });
-     } else {
-       server.listen(process.env.PORT || 3000);   // fallback solo para dev local
-     }
-   });
-   ```
-5. **Build** (si aplica). Next.js y NestJS necesitan compilar:
-   ```bash
-   npm run build
-   ```
-6. **Crear el `.env` ANTES de enlazar** (si la app usa variables de entorno). Fuera del repo, nunca en git, con permisos `600`:
-   ```bash
-   cp .env.example .env     # si hay ejemplo
-   chmod 600 .env
-   # rellenar valores reales (BD, llaves, etc.)
-   ```
-7. **Lanzar en pm2**, apuntando al Node correcto:
-   ```bash
-   pm2 start server.js --name miapp --interpreter="$(which node)"
-   pm2 save
-   ```
-   (Express: `pm2 start app.js ...`. NestJS: `pm2 start dist/main.js ...`.)
-8. **Enlazar el dominio al socket** por el panel (**Node App** → elegir app + dominio → **Enlazar**) o el CLI `mbnode-deploy`. **Ese enlace es el que arranca la app en el socket** con `APP_SOCKET` ya puesto. El reverse-proxy + SSL los configura MBHostCloud.
-9. **Verificar:** `pm2 logs miapp` debe mostrar "escuchando en socket ..." y las peticiones entrando; `https://tudominio.com` debe servir la app.
+## Reglas duras
 
----
+1. **Flujo:** tarjeta → issue (lo abre `MarbustTechnologyCompany`) → rama → PR en borrador → QA → aprobación de la empresa → squash. Nadie hace push directo a `main`. Detalle en [`CONTRIBUTING.md`](CONTRIBUTING.md).
+2. **El issue se autocontiene.** Skill `escribir-un-issue`.
+3. **Revisión obligatoria.** Antes del PR, corre `revisar-codigo`. **Codex participa siempre.**
+4. **Verificado en el servidor real (regla que manda):** cada comando o paso nuevo/cambiado se prueba en el hosting de MBHostCloud (Terminal del panel) con la salida real; nada se afirma "de memoria". Es la razón de ser de esta guía.
+5. **Coherencia con el hosting:** socket Unix, pm2, sin puertos TCP, proxy por el panel (no se edita Apache a mano). Si cambia el comportamiento del hosting, la guía cambia con él.
+6. **Sin secretos ni datos de clientes:** solo ejemplos ficticios; el `.env` va fuera del repo con `chmod 600` y nunca a git — y la guía lo repite.
+7. **Verificar:** el Markdown renderiza (bloques cerrados, enlaces válidos) y lo afirmado se probó en el servidor. El output va pegado en el PR.
+8. **Commits** con tipo (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`) y en español. **Prohibido** co-autoría de IA en commits y en PRs.
+9. **Nada de estado escrito a mano** (fechas de "última actualización", TODOs de avance) en la guía; el avance vive en los issues.
 
-## Los 3 gotchas que SÍ o SÍ hay que evitar
+## Seguridad (regla dura)
 
-### 1. `engines` / `EBADENGINE` — revisar la versión de Node ANTES de `npm ci`
-Si instalas deps con el Node equivocado (p. ej. Node 20 cuando el proyecto pide `>=22`), `npm ci` suelta avisos `EBADENGINE` y habrá que rehacer la instalación bajo la versión correcta. **Siempre leer `engines` en `package.json` primero** y usar nvm para la versión que pida, antes de instalar.
+- **Sin secretos ni datos reales de clientes** en la guía: solo ejemplos ficticios.
+- La guía **insiste** en que el `.env` va fuera del repo, con `chmod 600`, nunca a git.
+- No promover editar Apache a mano ni abrir puertos (el hosting lo bloquea por seguridad).
+- Una vulnerabilidad se reporta en privado: ver [`SECURITY.md`](SECURITY.md).
 
-### 2. `EPERM` antes de enlazar es NORMAL (orden socket ↔ enlace)
-El `APP_SOCKET` **solo se asigna AL enlazar**. Por eso **no se puede "escuchar en el socket" antes de enlazar**: antes del enlace la app no tiene socket, cae al fallback de puerto, y la jaula del hosting no permite abrir puertos TCP → aparece:
-```
-Error: listen EPERM: operation not permitted 0.0.0.0:3000
-```
-en crash-loop. **Esto es esperado, no es un bug que arreglar.** El orden real:
-- **(a)** lanzar la app en pm2 → **da error de puerto, es normal**; con que quede en `pm2 list` basta.
-- **(b)** **enlazar** (panel *Node App* o `mbnode-deploy`) → ese paso es el que la arranca en el socket con `APP_SOCKET`.
+## Skills del repositorio
 
-No intentes "arreglar" el EPERM pre-enlace ni rediseñar el `server.js` por él. Enlaza y el error desaparece.
+Hay **dos rutas**:
 
-### 3. El `.env` va FUERA del repo, con `chmod 600`, ANTES de enlazar
-Si la app necesita variables (BD, llaves) y arrancas sin `.env`, reventará (p. ej. `DATABASE_URL no está configurada`, 500). Crear el `.env` **antes** de enlazar, **nunca** commitearlo a git, y dejarlo en `chmod 600`. Lo más simple: `cp .env.example .env` y rellenar, o crearlo desde el File Manager del panel.
+1. **Colaboradores nuevos o externos** usan las skills de este repo, en [`.claude/skills/`](.claude/skills). Son una **copia sincronizada** desde el directorio oficial por el Action `sync-skills`; **no se editan a mano aquí**.
+2. **Colaboradores oficiales de Marbust** usan el **directorio oficial** (`MarbustTechnologyCompany/ClaudeSkills`, en `~/.claude/skills`). **Es la fuente de verdad.**
 
----
-
-## Notas rápidas para el agente
-
-- **No editar Apache a mano.** El proxy manual (`.htaccess [P]`, Custom HTTPD) está deshabilitado por seguridad en el hosting compartido. El enlace dominio→socket lo hace el panel / `mbnode-deploy`.
-- **pm2 y la versión de Node:** si usaste nvm para otra versión, arranca siempre con `--interpreter="$(which node)"`; si el daemon pm2 ya corría con otra versión, `pm2 update`.
-- **Arranque en boot:** `pm2 save` lo hace el cliente; el `pm2 startup` (servicio systemd) requiere root → lo corre el admin con la línea `sudo ...` que imprime `pm2 startup`.
-- **El socket NO se genera a mano:** la ruta la asigna MBHostCloud al enlazar; el archivo lo crea la app al hacer `listen(APP_SOCKET)`.
-- Detalle completo, troubleshooting (502, 500, SSL, umask/EACCES) y ejemplos: **[`README.md`](./README.md)**.
+| Skill | Cuándo |
+|---|---|
+| `escribir-un-issue` | Al crear o corregir un issue |
+| `trabajar-un-issue` | Al tomar un issue, de principio a fin |
+| `revisar-codigo` | **Obligatoria** antes del PR y al revisar el de otro |
