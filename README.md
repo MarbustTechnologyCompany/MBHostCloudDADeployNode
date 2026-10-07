@@ -59,6 +59,8 @@ pm2 -v       # 7.x        (ya disponible)
 
 Con eso corres la mayoría de apps modernas (Express, NestJS, etc.). Ve directo a **instalar las dependencias de tu proyecto:**
 
+> ⚠️ **Antes del `npm ci`, revisa `engines` en tu `package.json`.** Si tu app pide otra versión de Node (p. ej. `>=22`), instálala con **nvm** (`nvm install 22 && nvm use 22 && nvm alias default 22`) y recién ahí corre `npm ci`. Si instalas las dependencias con el Node equivocado verás avisos `EBADENGINE` y tendrás que rehacerlo.
+
 ```bash
 cd ~/miapp
 npm install          # instala según package.json
@@ -400,13 +402,33 @@ Falta lo último: que cuando alguien entre a `app.tudominio.com`, el servidor re
 
 > ⚠️ En el hosting compartido, "Custom HTTPD Configurations" y el `.htaccess` con proxy (`[P]`) están **deshabilitados a propósito, por seguridad** — así ningún cliente puede tocar (ni espiar) la configuración de otro. Por eso el enlace se hace por el panel o nos lo pides; **no** editando configs de Apache a mano.
 
+### El `.env` de tu app (antes de enlazar)
+
+Si tu app usa **variables de entorno** (conexión a BD, llaves, secretos), créalas en su `.env` **antes** de enlazar — si no, arrancará y reventará con un error tipo `DATABASE_URL no está configurada` (un 500 en el navegador).
+
+- El `.env` va **fuera del repo** — **nunca** se commitea a git.
+- Dale permisos privados: `chmod 600 .env`.
+- Lo más fácil: copia el ejemplo y rellena tus valores.
+
+```bash
+cd ~/miapp
+cp .env.example .env     # si tu proyecto trae un ejemplo
+chmod 600 .env           # solo tú puedes leerlo
+# edita .env y pon tus valores reales (BD, llaves, etc.)
+```
+
+> También puedes crear el `.env` desde el **File Manager** del panel. Lo importante es que exista **antes de enlazar**, con permisos `600`, y que **jamás** entre a git.
+
 ### Cómo enlazar
 
 1. Crea tu **dominio o subdominio** en DirectAdmin (**Account Manager → Domain Setup**), si aún no existe.
 2. Asegúrate de que tu app **escuche en el socket** (ver la sección *"El cambio CLAVE: escuchar en un SOCKET"*), no en un puerto.
-3. Arranca tu app en pm2 (Paso 3) **escuchando en el socket**. Luego, en tu **panel de MBHostCloud**, abre la sección **"Node App"**, elige tu **app** (de las que tengas corriendo en pm2) y tu **dominio/subdominio** → botón **Enlazar**.
+3. **Lanza tu app en pm2** (Paso 3). Ojo con el orden: **va a dar error en el puerto 3000 y es NORMAL** — todavía no tiene socket (el `APP_SOCKET` se asigna **al enlazar**), así que cae a su fallback de puerto, y la jaula del hosting no permite abrir puertos TCP. Con que la app quede listada en `pm2 list` basta; no te preocupes por ese error todavía.
+4. **Enlázala:** en tu **panel de MBHostCloud**, abre la sección **"Node App"**, elige tu **app** (de las que tengas corriendo en pm2) y tu **dominio/subdominio** → botón **Enlazar** (o el CLI `mbnode-deploy`). **El enlace es el que la arranca de verdad en el socket**, con `APP_SOCKET` ya puesto.
    > *La **carpeta** y el **archivo de arranque** se detectan solos de tu pm2 — no los escribes.* El enlace es **casi instantáneo**.
    > *(Mientras habilitamos esa sección en tu panel, escríbenos tu dominio + carpeta de la app a **support@mbhostcloud.com** y lo activamos en el momento.)*
+
+> ⚠️ **No se puede "escuchar en el socket" ANTES de enlazar.** El socket te lo asignamos **al enlazar**; antes del enlace tu app no tiene `APP_SOCKET`, cae al fallback de puerto y verás `Error: listen EPERM: operation not permitted 0.0.0.0:3000` en un crash-loop (la jaula del hosting no permite abrir puertos). Es lo esperado. El **orden real** es: **(a)** lanzas la app en pm2 — da error de puerto, es normal, con que quede en `pm2 list` basta; **(b)** la **enlazas** (portal → *Node App* → eliges app + dominio → *Enlazar*, o el CLI `mbnode-deploy`), y **ese enlace es el que la arranca en el socket** con `APP_SOCKET`.
 
 En segundos tu dominio queda sirviendo tu app **por socket** (sin puerto abierto), con **SSL**. Nosotros configuramos el reverse-proxy y tu `APP_SOCKET`; **tú solo mantienes tu app viva con pm2 y ves tus logs.** 🎉
 
