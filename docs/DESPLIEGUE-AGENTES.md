@@ -1,6 +1,6 @@
 # AGENTS.md — Desplegar una app Node/Next.js en MBHostCloud (guía para agentes de IA)
 
-Esta es la versión **condensada y accionable** para un **agente de IA** que ayuda a un cliente de MBHostCloud a desplegar su app Node.js / Next.js en su hosting (DirectAdmin + Apache), **como el usuario cliente, sin root**. Para el detalle y las explicaciones completas, lee el [`README.md`](./README.md).
+Esta es la versión **condensada y accionable** para un **agente de IA** que ayuda a un cliente de MBHostCloud a desplegar su app Node.js / Next.js en su hosting (DirectAdmin + Apache), **como el usuario cliente, sin root**. Para el detalle y las explicaciones completas, lee el [`README.md`](../README.md).
 
 > Entorno: hosting compartido DirectAdmin + Apache, acceso por el **Terminal del panel** (sin root). La app corre bajo **pm2** y escucha en un **socket Unix** (no en un puerto). Apache hace reverse-proxy del dominio al socket. El cliente **no** edita configs de Apache; el enlace dominio→socket lo hace **el panel** (sección *Node App*) o el CLI `mbnode-deploy`.
 
@@ -96,4 +96,4 @@ Si la app necesita variables (BD, llaves) y arrancas sin `.env`, reventará (p. 
 - **pm2 y la versión de Node:** si usaste nvm para otra versión, arranca siempre con `--interpreter="$(which node)"`; si el daemon pm2 ya corría con otra versión, `pm2 update`.
 - **Arranque en boot:** `pm2 save` lo hace el cliente; el `pm2 startup` (servicio systemd) requiere root → lo corre el admin con la línea `sudo ...` que imprime `pm2 startup`.
 - **El socket NO se genera a mano:** la ruta la asigna MBHostCloud al enlazar; el archivo lo crea la app al hacer `listen(APP_SOCKET)`.
-- Detalle completo, troubleshooting (502, 500, SSL, umask/EACCES) y ejemplos: **[`README.md`](./README.md)**.
+- Detalle completo, troubleshooting (502, 500, SSL, umask/EACCES) y ejemplos: **[`README.md`](../README.md)**.
