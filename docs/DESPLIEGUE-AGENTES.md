@@ -94,6 +94,6 @@ Si la app necesita variables (BD, llaves) y arrancas sin `.env`, reventará (p. 
 
 - **No editar Apache a mano.** El proxy manual (`.htaccess [P]`, Custom HTTPD) está deshabilitado por seguridad en el hosting compartido. El enlace dominio→socket lo hace el panel / `mbnode-deploy`.
 - **pm2 y la versión de Node:** si usaste nvm para otra versión, arranca siempre con `--interpreter="$(which node)"`; si el daemon pm2 ya corría con otra versión, `pm2 update`.
-- **Arranque en boot:** `pm2 save` lo hace el cliente; el `pm2 startup` (servicio systemd) requiere root → lo corre el admin con la línea `sudo ...` que imprime `pm2 startup`.
+- **Arranque en boot:** `pm2 save` lo hace el cliente. El servicio systemd (`pm2-<usuario>.service`) lo crea el servidor solo: al enlazar (panel / `mbnode-deploy`) y con la tarea diaria que lo crea para toda cuenta con `~/.pm2/dump.pm2`. No se le pide al cliente correr `pm2 startup` ni escribir a soporte.
 - **El socket NO se genera a mano:** la ruta la asigna MBHostCloud al enlazar; el archivo lo crea la app al hacer `listen(APP_SOCKET)`.
 - Detalle completo, troubleshooting (502, 500, SSL, umask/EACCES) y ejemplos: **[`README.md`](../README.md)**.
