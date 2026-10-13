@@ -364,26 +364,14 @@ pm2 restart miapp --update-env   # reinicia releyendo las variables de entorno
 
 ## Paso 4 — Que sobreviva a los reinicios del servidor
 
-Si el servidor se reinicia, quieres que tu app vuelva sola. Esto son **dos piezas**:
+Si el servidor se reinicia, quieres que tu app vuelva sola. Son **dos piezas**, y de tu lado solo hay **un comando**:
 
-**A) Un servicio de arranque (lo activa una sola vez el administrador).**
-Como cliente no eres root, así que PM2 no puede instalar el servicio de arranque por ti — pero **te imprime la línea exacta** que el admin debe correr. Ejecuta:
+**A) El servicio de arranque — se activa solo, no haces nada.**
+Tu cuenta necesita un servicio del sistema que levante PM2 cuando arranca el servidor. **No lo pides a soporte ni corres `pm2 startup`:** el servidor lo crea por ti de dos formas:
+- al **enlazar** tu app desde el panel (sección **"Node App"**) o con el CLI `mbnode-deploy` (Paso 5);
+- y, para cualquier cuenta que tenga su lista guardada (pieza B), una **tarea diaria del servidor** crea el servicio si aún faltara.
 
-```bash
-pm2 startup
-```
-
-Verás algo así (el texto exacto depende de tu usuario y de dónde está tu Node):
-
-```
-[PM2] Init System found: systemd
-[PM2] To setup the Startup Script, copy/paste the following command:
-sudo env PATH=$PATH:... pm2 startup systemd -u TU_USUARIO --hp /home/TU_USUARIO
-```
-
-**Copia esa línea `sudo ...` y pásasela al administrador de MBHostCloud** (soporte). Él la corre una sola vez y queda listo para siempre.
-
-**B) Guardar tu lista de apps (esto lo haces tú, sin root).**
+**B) Guardar tu lista de apps (esto sí lo haces tú).**
 Con tus apps corriendo como las quieres:
 
 ```bash
@@ -394,7 +382,7 @@ Esto congela la lista actual (`Successfully saved in ~/.pm2/dump.pm2`). En el pr
 
 Repite `pm2 save` cada vez que agregues, quites o cambies tus apps.
 
-> **Cuidado:** para persistir usa siempre `pm2 save`. No intentes reiniciar el servicio con `systemctl restart` mientras tu daemon de PM2 está vivo — puede entrar en un bucle de error. En un reinicio real del servidor no pasa. Si alguna vez necesitas forzarlo a mano, primero `pm2 kill` y luego que el admin lo arranque.
+> **Cuidado:** para persistir usa siempre `pm2 save`. No intentes reiniciar el servicio con `systemctl restart`: no hace falta, y con tu daemon de PM2 vivo puede entrar en un bucle de error. En un reinicio real del servidor no pasa. Si tu app quedó en un estado raro, vuelve a **enlazarla** desde el panel: el enlace la deja corriendo en su socket y persistente.
 
 ---
 
@@ -402,7 +390,7 @@ Repite `pm2 save` cada vez que agregues, quites o cambies tus apps.
 
 Falta lo último: que cuando alguien entre a `app.tudominio.com`, el servidor reenvíe (reverse-proxy) el tráfico a tu app Node. **Esto NO lo configuras a mano** — en MBHostCloud el enlace se hace desde el **panel**, y nosotros apuntamos tu dominio a tu **socket** de forma segura.
 
-> ⚠️ En el hosting compartido, "Custom HTTPD Configurations" y el `.htaccess` con proxy (`[P]`) están **deshabilitados a propósito, por seguridad** — así ningún cliente puede tocar (ni espiar) la configuración de otro. Por eso el enlace se hace por el panel o nos lo pides; **no** editando configs de Apache a mano.
+> ⚠️ En el hosting compartido, "Custom HTTPD Configurations" y el `.htaccess` con proxy (`[P]`) están **deshabilitados a propósito, por seguridad** — así ningún cliente puede tocar (ni espiar) la configuración de otro. Por eso el enlace se hace por el panel (sección **"Node App"**) o con el CLI `mbnode-deploy`; **no** editando configs de Apache a mano.
 
 ### El `.env` de tu app (antes de enlazar)
 
@@ -428,7 +416,6 @@ chmod 600 .env           # solo tú puedes leerlo
 3. **Lanza tu app en pm2** (Paso 3). Ojo con el orden: **va a dar error en el puerto 3000 y es NORMAL** — todavía no tiene socket (el `APP_SOCKET` se asigna **al enlazar**), así que cae a su fallback de puerto, y la jaula del hosting no permite abrir puertos TCP. Con que la app quede listada en `pm2 list` basta; no te preocupes por ese error todavía.
 4. **Enlázala:** en tu **panel de MBHostCloud**, abre la sección **"Node App"**, elige tu **app** (de las que tengas corriendo en pm2) y tu **dominio/subdominio** → botón **Enlazar** (o el CLI `mbnode-deploy`). **El enlace es el que la arranca de verdad en el socket**, con `APP_SOCKET` ya puesto.
    > *La **carpeta** y el **archivo de arranque** se detectan solos de tu pm2 — no los escribes.* El enlace es **casi instantáneo**.
-   > *(Mientras habilitamos esa sección en tu panel, escríbenos tu dominio + carpeta de la app a **support@mbhostcloud.com** y lo activamos en el momento.)*
 
 > ⚠️ **No se puede "escuchar en el socket" ANTES de enlazar.** El socket te lo asignamos **al enlazar**; antes del enlace tu app no tiene `APP_SOCKET`, cae al fallback de puerto y verás `Error: listen EPERM: operation not permitted 0.0.0.0:3000` en un crash-loop (la jaula del hosting no permite abrir puertos). Es lo esperado. El **orden real** es: **(a)** lanzas la app en pm2 — da error de puerto, es normal, con que quede en `pm2 list` basta; **(b)** la **enlazas** (portal → *Node App* → eliges app + dominio → *Enlazar*, o el CLI `mbnode-deploy`), y **ese enlace es el que la arranca en el socket** con `APP_SOCKET`.
 
@@ -470,7 +457,7 @@ pm2 start app.js --name miapp
 pm2 logs miapp
 ```
 
-El **enlace del dominio → tu app lo hace MBHostCloud por el panel** (sección **"Node App"**: eliges dominio + carpeta + arranque → *Enlazar*), o nos lo pides a **support@mbhostcloud.com**. **No editas Apache a mano** — en el hosting compartido el proxy manual está deshabilitado por seguridad; nosotros apuntamos tu dominio a tu **socket** con SSL.
+El **enlace del dominio → tu app lo hace MBHostCloud por el panel** (sección **"Node App"**: eliges tu app + dominio → *Enlazar*; la carpeta y el arranque se detectan solos de tu pm2), o con el CLI `mbnode-deploy`. **No editas Apache a mano** — en el hosting compartido el proxy manual está deshabilitado por seguridad; nosotros apuntamos tu dominio a tu **socket** con SSL.
 
 Y si prefieres arrancar con un archivo de configuración de PM2 (`ecosystem.config.js`), en vez de la línea de comando:
 
@@ -567,7 +554,7 @@ pm2 logs miapp           # <-- LOGS EN VIVO (Ctrl-C para salir, la app sigue)
 # 4) Que sobreviva reinicios
 pm2 save                 # congela tu lista de apps (vuelven solas tras un reinicio)
 
-# 5) Enlazar el dominio: por el panel (sección "Node App"), o pídelo a support@mbhostcloud.com
+# 5) Enlazar el dominio: por el panel (sección "Node App") o con el CLI mbnode-deploy
 ```
 
 ¡Listo! Tu app corre bajo tu control, sobrevive reinicios, y puedes ver todo lo que hace en tiempo real. Bienvenido al control total. 🚀
@@ -576,6 +563,6 @@ pm2 save                 # congela tu lista de apps (vuelven solas tras un reini
 
 ## ¿Necesitas ayuda?
 
-Esta guía es **exclusiva para clientes de MBHostCloud®**. Para el único paso que requiere administrador (el `pm2 startup` que activa el arranque en boot) o para cualquier duda del despliegue, escríbenos a **support@mbhostcloud.com** y te ayudamos.
+Esta guía es **exclusiva para clientes de MBHostCloud®**. Para cualquier duda del despliegue, escríbenos a **support@mbhostcloud.com** y te ayudamos.
 
 <sub>MBHostCloud® — un servicio de MarBust Technology Company. Hosting con control real y logs en vivo.</sub>
