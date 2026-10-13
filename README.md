@@ -390,7 +390,7 @@ Repite `pm2 save` cada vez que agregues, quites o cambies tus apps.
 
 Falta lo último: que cuando alguien entre a `app.tudominio.com`, el servidor reenvíe (reverse-proxy) el tráfico a tu app Node. **Esto NO lo configuras a mano** — en MBHostCloud el enlace se hace desde el **panel**, y nosotros apuntamos tu dominio a tu **socket** de forma segura.
 
-> ⚠️ En el hosting compartido, "Custom HTTPD Configurations" y el `.htaccess` con proxy (`[P]`) están **deshabilitados a propósito, por seguridad** — así ningún cliente puede tocar (ni espiar) la configuración de otro. Por eso el enlace se hace por el panel o nos lo pides; **no** editando configs de Apache a mano.
+> ⚠️ En el hosting compartido, "Custom HTTPD Configurations" y el `.htaccess` con proxy (`[P]`) están **deshabilitados a propósito, por seguridad** — así ningún cliente puede tocar (ni espiar) la configuración de otro. Por eso el enlace se hace por el panel (sección **"Node App"**) o con el CLI `mbnode-deploy`; **no** editando configs de Apache a mano.
 
 ### El `.env` de tu app (antes de enlazar)
 
@@ -457,7 +457,7 @@ pm2 start app.js --name miapp
 pm2 logs miapp
 ```
 
-El **enlace del dominio → tu app lo hace MBHostCloud por el panel** (sección **"Node App"**: eliges dominio + carpeta + arranque → *Enlazar*), o con el CLI `mbnode-deploy`. **No editas Apache a mano** — en el hosting compartido el proxy manual está deshabilitado por seguridad; nosotros apuntamos tu dominio a tu **socket** con SSL.
+El **enlace del dominio → tu app lo hace MBHostCloud por el panel** (sección **"Node App"**: eliges tu app + dominio → *Enlazar*; la carpeta y el arranque se detectan solos de tu pm2), o con el CLI `mbnode-deploy`. **No editas Apache a mano** — en el hosting compartido el proxy manual está deshabilitado por seguridad; nosotros apuntamos tu dominio a tu **socket** con SSL.
 
 Y si prefieres arrancar con un archivo de configuración de PM2 (`ecosystem.config.js`), en vez de la línea de comando:
 
